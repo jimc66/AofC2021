@@ -4,7 +4,7 @@ var depth_array_num = [];
 var increase = 0;
 for (i in depth_array_string) {
     depth_array_num.push (Number(depth_array_string[i]));
-    console.log (depth_array_string[i]);
+//    console.log (depth_array_string[i]);
 
 }
 
