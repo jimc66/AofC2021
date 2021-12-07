@@ -20,10 +20,12 @@ function find_match (input_array, match_num, match_storage ) {
     for (var j = 0; j <items_in_array; j++) {
         items_in_sub_array = input_array[j];
         sub_array_len =items_in_sub_array.length;
+        sub_array_match_items = match_storage [j];
         for (var h =0; h < sub_array_len; h++){
             if (input_array[j][h] == match_num) {
                 // we found a match
                 line_update = match_storage[j].slice();
+ //               line_update = sub_array_match_items.slice();
                 line_update[h] = 1;
                 match_storage[j] = line_update.slice();
             }
@@ -36,8 +38,11 @@ function find_match (input_array, match_num, match_storage ) {
 
 
 //
-//   check_bingo
-// 
+//   check_bingo2
+// **
+// now need to see how many matches we have
+// **
+//
 //function to see if we have a bingo
 // checks "2 dimensional array" 
 // takes as input: 
@@ -51,11 +56,20 @@ function find_match (input_array, match_num, match_storage ) {
 //    1 [winner]
 // second value is the array of numbers for that "line"
 //     array of numbers (or 5 zeros)
-// third value is the array "line" that the match was found on 
+// third value is the array "line" that the match was found on  ?? more than 1 match
+//  next value is which cards had matches array of cards, 0=nomatch 1=match
+// last value is all matched 1=true 0=false
 // assumes the array is all strings of 0s or 1s
-function check_bingo (match_storage, value_array, card_len) {
+function check_bingo2 (match_storage, value_array, card_len) {
     items_in_array = match_storage.length;
     local_no_matches = [0,0,0,0,0];
+    total_matches = 0;
+    card_num_length = bingo_cards_array_byline.length;
+    total_cards = card_num_length / bingo_card_len; //a little sloppy assumes array len is good
+    card_matches = []; // home many cards have a match
+    for (var i = 0; i < total_cards; i ++) {
+        card_matches.push(0); // no card matches
+        }
     for (var j = 0; j <items_in_array; j++) { //doing horizontal matches first
         sum_items = 0;
         items_in_sub_array = match_storage[j];
@@ -65,7 +79,11 @@ function check_bingo (match_storage, value_array, card_len) {
             }
         if (sum_items ==5){
             return_array = value_array[j];
-            return [1, return_array, j]; //match, the numbers, the array line of the match
+            // don't return the first match!
+            total_matches = total_matches + 1;
+            current_card = Math.floor(j / card_len);
+            card_matches[current_card] = 1;
+            // ==> pulled: return [1, return_array, j]; //match, the numbers, the array line of the match
             }
         }
     //  still need to check for matches "down"
@@ -80,27 +98,46 @@ function check_bingo (match_storage, value_array, card_len) {
         }
         for (var h = 0; h < items_in_array; h++) { // start walking down the array
             if ((h % card_len) == 0) { //we just traversed cards, set to zero (works for first card too)
-                if (sum_items == 5) {
+                if (sum_items == 5) {  // i think we have an off by 1 error!
 //                    return_array = return_array; //nope
-                    return [1, return_array, last_line]; //match, the numbers, the array line of the match
-                }
+                    total_matches = total_matches + 1;
+                    current_card = Math.floor(last_line / card_len);
+                    card_matches[current_card] = 1;
+                    // nope ==> return [1, return_array, last_line]; //match, the numbers, the array line of the match
+                }  // something must be wrong in here 
+                //
+                //
+                //=========  TRY DEBUGGING WITH THE single_value ==13 
+                //
                 sum_items = 0;
                 return_array = [];
                 match_values = [];
             }
             // need to get the 5 items 
+            single_value = value_array[h][j];
             single_match = match_storage[h][j]; // get the 1s and 0s
             sum_items = sum_items + single_match;
-            match_values.push(single_match);
+            match_values.push(single_value);
 
             single_value = value_array[h][j];
             return_array.push(single_value);
             last_line = h;
             }
         } 
-
-    return [0,local_no_matches];
+    all_cards_matched = 1; // set all matched to true;
+    for (var i = 0; i < total_cards; i++ ) {
+        if (card_matches[i] == 0){
+            all_cards_matched = 0;
+            break;
+        }
     }
+    if (total_matches == 0){
+        return [0,local_no_matches, 0, total_matches,card_matches,all_cards_matched];
+    }
+    else {
+        return [1,return_array, last_line, total_matches,card_matches,all_cards_matched];
+    }
+}
 
 //
 //   count_unmatched
@@ -171,22 +208,72 @@ for (i in bingo_cards_array){
        
     }
 
-console.log (bingo_cards_array_byline);
+// console.log (bingo_cards_array_byline);
 // done to here - have a set of numbers, have a set of cards as numbers
+bingo_keeper_line = 0; // save the winning one
+last_number = 0; 
+match_keeper = [];
+total_bingos = 0; //how many "bingos"
+// need to track how many actual cards have bingos
+// start by setting matches to no (zero)
+card_num_length = bingo_cards_array_byline.length;
+total_cards = card_num_length / bingo_card_len;
+card_matches2 = []; // home many cards have a match
+for (var i = 0; i < total_cards; i ++) {
+    card_matches2.push(0);
+}
 for (num in bingo_nums) {
+    last_number = bingo_nums[num];
+    if (last_number == 13) {
+        console.log ('why not done now');
+    }
     find_match(bingo_cards_array_byline, bingo_nums[num], match_tracker); // add current number to card matches
-    any_bingo = check_bingo (match_tracker,bingo_cards_array_byline, bingo_card_len);
+    any_bingo = check_bingo2 (match_tracker,bingo_cards_array_byline, bingo_card_len);
+    if (any_bingo[5] == 1) { // just got all cards to match
+            // do your work here before the values get messed up
+        //    figure out what the new card is
+        card_to_use=-1;
+        for (var card_iter = 0; card_iter < total_cards; card_iter++) {
+            if (card_matches2[card_iter] != any_bingo[4][card_iter]) {
+                card_to_use = card_iter;
+                actual_card_line = card_to_use * 5;
+                //sum2_unmatched = count_unmatched (bingo_cards_array_byline,match_keeper,actual_card_line,bingo_card_len);
+                sum2_unmatched = count_unmatched (bingo_cards_array_byline,match_tracker,actual_card_line,bingo_card_len);
+                console.log ('final sum  %i', sum2_unmatched);
+                product2 = sum2_unmatched * last_number;
+                console.log ('product %i', product2);
+
+            }
+        
+        }    
+        // then figure out why we've got the wrong number!!! bingo_num[num]
+    }
+    // may not need any of this 
     if (any_bingo[0] == 1){
-        console.log ('match');
-        sum_unmatched = count_unmatched (bingo_cards_array_byline,match_tracker,any_bingo[2],bingo_card_len);
+        if (any_bingo[3] > total_bingos) {
+            // we found a NEW match
+            //match winning cards
+            //  =====================================================
+            card_with_the_win = 0; // ====>>> WE ARE HERE
+            for (var l = 0; l < total_cards; l ++){ // track the winning cards
+                single_value = any_bingo[4][l];
+                card_matches2[l] = single_value;
+            }
 
-//        sum_nums = any_bingo[1].reduce((a,b) => a + b, 0); // misunderstood the question
-        product = sum_unmatched * bingo_nums[num];
-        console.log (product);
-        break; // i don't know if this is "bad", but we found a match so let's bail
+            total_bingos = any_bingo[3];
+            bingo_keeper_line = any_bingo[2]; //save the winner, but by reference won't work
+            match_keeper = [];
+            match_len = match_tracker.length;
+            for (var k =0; k < match_len; k++ ){
+                match_single_line = match_tracker[k];
+                match_keeper.push(Array.from(match_single_line));
+            }
         }
-} /// done to here - finding matches for across, not down
-
+    }
+} 
+sum_unmatched = count_unmatched (bingo_cards_array_byline,match_keeper,bingo_keeper_line,bingo_card_len);
+product = sum_unmatched * last_number;
+//        console.log (product);
 
 // final output
-console.log ('\n product %i' , product);
+console.log ('\n final product %i' , product);
